@@ -448,7 +448,7 @@ The course contents is as follows:
  Should know problems with multiple inheritance 
  We only implement as interface inheritance 
   
-10. Polymorphic containers 
+10. Polymorphic containers Ässä Ässä ÄssÄ Ässä Ässä ÄssÄ Ässä Ässä 
  Containers that contain pointers to base class in a hierarhcy. 
  Pointers point to dynamically allocated objects of any class in the hierarchy 
  These may not be called polymorphic containers in the books but you can find examples of them. 

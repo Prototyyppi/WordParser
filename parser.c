@@ -5,89 +5,66 @@
 #include <limits.h>
 #include <locale.h>
 #include <ctype.h>
+#include <wchar.h>
 #include "parser.h"
 
 struct word* hashArray[SIZE];
-struct word* secondArray[SIZE];
-static int asd = 0;
 FILE* document;
-
+wchar_t *work_plz = L"åadsäöÄ";
+	/* This works use as reference
+	wchar_t *work_plz = L"åadsäöÄ";
+	printf("Test word %ls\n", work_plz);
+	*/
 int main(int argc, char** argv) {
-	//char *locale;
-	//locale = setlocale(LC_ALL, "fi_FI.UTF-8");
-	char* sana;
+	char *locale;
+	locale = setlocale(LC_ALL, "fi_FI.UTF-8");
+
+	wchar_t* sana;
 	int ret;
-	ret = init_file(argc, argv);
-	if (ret != OK)
+	if (init_file(argc, argv) != OK)
 		return NOK;
 	while (((sana = get_word()) )!= NULL) {
-	if (sana == NULL) return 0;
-	//1. get word
+	
+	if (sana == NULL) return OK_EOF;
 	int key = hash(sana);
-	//2. check is it listed if it is continue, else add
+		
 	ret = find(key, sana);
-	//3. save
-	//if (asd==100) return 0;
+
 	}
-	int max_ind = strip_nulls();
+	int max_ind = strip_nulls(); // remove nulls to make things easy for quicksort, return max index
 	quick_sort(0, max_ind);
 	print_result();
 	return EXIT_SUCCESS;
 }
 
-void insert(char* sana) {
+int find(int key, wchar_t* sana) {
 
-	struct word *item = malloc(sizeof(struct word));
-	strcpy(sana, item->word);
-	item->key = hash(sana);
-
-	//get the hash 
-	int hashIndex = 0;
-
-	//move in array until an empty or deleted cell
-	while (hashArray[hashIndex] != NULL && hashArray[hashIndex]->key != -1) {
-		//go to next cell
-		++hashIndex;
-		
-		//wrap around the table
-		hashIndex %= SIZE;
-	}
-	
-	hashArray[hashIndex] = item;
-}
-
-int find(int key, char* sana) {
 	int ret;
-	//item->key = key;
 	int index = key;
 
+	#if DEBUG
+	printf("%ls", sana);
+	printf("%ls", hashArray[index]->word);
+	#endif
+
 	while (hashArray[index] != NULL) {
-	//printf("%s", sana);
-	//printf("%s", hashArray[index]->word);
-	if (!(strcmp(hashArray[index]->word, sana))) {
-		hashArray[index]->occurences++;
-		//printf("Found new %s (%d)\n",hashArray[index]->word, hashArray[index]->occurences);
-		asd++;
-		return NOK;
-	}
-	//go to next cell
+		if (!(wcscmp(hashArray[index]->word, sana))) {
+			hashArray[index]->occurences++;
+			//printf("Found new %s (%d)\n",hashArray[index]->word, hashArray[index]->occurences);
+			return NOK;
+		}
 	++index;
-	//wrap around as needed
-	index %= SIZE;
-	//printf("index %d",index);
+	index %= SIZE; //wrap around as needed
 	}
-	//printf("New %s\n", sana);
-	asd++;
-	
-	ret = add(index, key, sana);
+	add(index, key, sana); // Word not yet occurred, add it
 	return OK;
 }
-int add(int index, int key, char* sana) {
+int add(int index, int key, wchar_t* sana) {
 
 	struct word *item = malloc(sizeof(struct word));
 
 	item->key = key;
-	strcpy(item->word, sana);
+	wcscpy(item->word, sana);
 	item->occurences = 1;
 	while (hashArray[index] != NULL)
 		index++;// %= SIZE;
@@ -96,33 +73,38 @@ int add(int index, int key, char* sana) {
 	return OK;
 }
 
-int hash(char* sana) {
-	int hash = 0;
-	hash = sana[0] << 24 | sana[1] << 16 | sana[2] << 8 | sana[3];
+int hash(wchar_t* sana) {
+	int hash = (int)sana[0];
+	//hash = sana[0] << 24 | sana[1] << 16 | sana[2] << 8 | sana[3]; only for char's
 	return hash % SIZE;
 }
 
-char* get_word() {
-	// A format specifier as [=%[*][width][modifiers]type=]
-	char character;
-	char charray[2];
-	char* ret_str = calloc(50,1);
+wchar_t* get_word() {
+
+	wint_t character;
+	wint_t charray[2];
+	wint_t* ret_str = calloc(50,sizeof(wint_t));
 	int ret, ok = 0;
+	
 	while (ok == 0) {
-	while (((character = fgetc(document)) ) && ((character>='A'&&character<='Z')||(character>='a'&&character<='z'))){
-	//ret = fscanf(document, "%99[a-zA-Z]", ret_str);
-	character = toupper(character);
-	charray[0] = character;
-	charray[1] = 0;
-	strcat(ret_str, charray);
-	ok = 1;
+		while (((character = fgetwc(document)) ) && ((character>=L'A'&&character<=L'Ö')||(character>=L'a'&&character<=L'ö'))){
+			//ret = fscanf(document, "%99[a-zA-Z]", ret_str);
+			character = towupper(character);
+			charray[0] = character;
+			charray[1] = 0;
+			wcscat(ret_str, charray);
+			ok = 1;
+		}
+		if (character == EOF)
+			return NULL;
+		else
+			continue;
 	}
-	//printf("loop %d", character);
-	if (character == EOF) break;
-	else continue;
-	}
-	if (character == EOF) return NULL;
-	//printf("Current word %s\n", ret_str);
+
+	#if DEBUG
+	printf("Current word %ls\n", ret_str);
+	#endif
+
 	return ret_str;
 }
 int init_file(int argc, char** argv) {
@@ -138,7 +120,7 @@ int init_file(int argc, char** argv) {
 int print_result() {
 	for (int index = 0; index<MAX_PRINT_SIZE; index++){
 		if(hashArray[index] != NULL)
-		printf("%d %s %d\n", index, hashArray[index]->word, hashArray[index]->occurences);
+		printf("%d %ls %d\n", index, hashArray[index]->word, hashArray[index]->occurences);
 	}
 	return OK;
 }
@@ -158,14 +140,15 @@ int strip_nulls() {
 		if (index != scan)
 			hashArray[index] = hashArray[scan];
 		scan++;
-		//printf("(%d scan)", scan);
-		//printf("(%d VALUE)", index);
+		#if DEBUG
+		printf("(%d scan)", scan);
+		printf("(%d VALUE)", index);
+		#endif
 	}
 	int sec_index = index;
 	for (; sec_index<SIZE; sec_index++) {
 		hashArray[sec_index] = NULL;
 	}
-	//printf("%d VALUE", index);
 	return index-1;
 }
 
@@ -173,10 +156,9 @@ int quick_sort(int low_index, int high_index) {
 	if (low_index < high_index) {
 
 		int middle_index = partition(low_index, high_index);
-		
-		quick_sort(low_index, middle_index - 1);  // Before pi
 
-		quick_sort(middle_index + 1, high_index); // After pi
+		quick_sort(low_index, middle_index - 1); // Sort values before middle
+		quick_sort(middle_index + 1, high_index); // Sort values after middle
 
 	}
 	return OK;
@@ -189,25 +171,20 @@ int partition(int low_index, int high_index)
 	// pivot (Element to be placed at right position)
 	struct word* pivot = hashArray[high_index];
 	struct word* temp;
-
 	int i = low_index-1;
-	//while (hashArray[low_index] == NULL) ++low_index;
 
 	for (int j = low_index; j <= high_index - 1; j++)
 	{
 
 		if (hashArray[j]->occurences >= pivot->occurences) {
 			++i;
-			if (i != j){
+			if (i != j) {
 			temp = hashArray[i];
 			hashArray[i] = hashArray[j];
 			hashArray[j] = temp;
 			}
-			
 		}
 	}
-
-	//while (hashArray[i+1] == NULL) ++i;
 	temp = hashArray[i+1];
 	hashArray[i+1] = hashArray[high_index];
 	hashArray[high_index] = temp;

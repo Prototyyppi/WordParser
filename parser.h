@@ -7,36 +7,37 @@
 #define SIZE 1000
 #define WORD_MAX_LEN 100
 #define MAX_PRINT_SIZE 100
+#define DEBUG 0
 struct word {
-	char word[WORD_MAX_LEN];
+	wchar_t word[WORD_MAX_LEN];
 	int occurences;
 	int key;
 };
 
 enum err {
 	OK,
-	NOK
+	NOK,
+	OK_EOF
 };
 
-//inline may increase speed
+//inline may increase speed depending on compiler
 static inline const char* err2str(enum err err)
 {
-	static const char* strings[] = { "OK", "NOK"};
-
+	static const char* strings[] = { "OK", "NOK", "OK_EOF"};
 	return strings[err];
 }
 
 void insert(char* sana);
 
-int find(int key, char sana[]);
+int find(int key, wchar_t sana[]);
 
-int add(int index, int key, char* sana);
+int add(int index, int key, wchar_t* sana);
 
-int hash(char* sana);
+int hash(wchar_t* sana);
 
 int init_file(int, char**);
 
-char* get_word();
+wchar_t* get_word();
 
 int print_result();
 
