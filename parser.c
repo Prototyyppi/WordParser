@@ -5,16 +5,13 @@
 #include <limits.h>
 #include <locale.h>
 #include <ctype.h>
-#include <wchar.h>
+#include <wchar.h> // for scandi characters
 #include "parser.h"
 
 struct word* hashArray[SIZE];
 FILE* document;
-wchar_t *work_plz = L"åadsäöÄ";
-	/* This works use as reference
-	wchar_t *work_plz = L"åadsäöÄ";
-	printf("Test word %ls\n", work_plz);
-	*/
+int datapoints = 0;
+
 int main(int argc, char** argv) {
 	char *locale;
 	locale = setlocale(LC_ALL, "fi_FI.UTF-8");
@@ -27,9 +24,10 @@ int main(int argc, char** argv) {
 	
 	if (sana == NULL) return OK_EOF;
 	int key = hash(sana);
-		
 	ret = find(key, sana);
-
+	if (datapoints > SIZE-1) {
+		remove_rare();
+	}
 	}
 	int max_ind = strip_nulls(); // remove nulls to make things easy for quicksort, return max index
 	quick_sort(0, max_ind);
@@ -59,10 +57,11 @@ int find(int key, wchar_t* sana) {
 	add(index, key, sana); // Word not yet occurred, add it
 	return OK;
 }
+
 int add(int index, int key, wchar_t* sana) {
 
 	struct word *item = malloc(sizeof(struct word));
-
+	datapoints += 1;
 	item->key = key;
 	wcscpy(item->word, sana);
 	item->occurences = 1;
@@ -73,8 +72,43 @@ int add(int index, int key, wchar_t* sana) {
 	return OK;
 }
 
+int remove_rare() {
+	int index = 0;
+	int ok, curr_min = INT32_MAX, min_index;
+	while (index < SIZE) {
+		if (hashArray[index] != NULL) {
+			if (hashArray[index]->occurences < curr_min)
+				min_index = index;
+		}
+		index++;
+		ok = 1;
+	}
+	//printf("I sHALL REMOVE");
+	if (!ok)
+		return NOK;
+	remove_datapoint(min_index);
+	return OK;
+}
+
+void remove_datapoint(int index) {
+	//printf("I sHALL REMOVE");
+	hashArray[index]->key = -1;
+	wcscpy(hashArray[index]->word, L"removed");
+	hashArray[index]->occurences = -1;
+	hashArray[index] = NULL;
+	datapoints--;
+
+}
+
 int hash(wchar_t* sana) {
-	int hash = (int)sana[0];
+	int hash;
+	for (int i = 0; i < 4; i++){
+		if (sana[i] != 0) {
+			hash *= sana[i];
+			hash >>= 2;
+		}
+	}
+	//int hash = (int)sana[0];
 	//hash = sana[0] << 24 | sana[1] << 16 | sana[2] << 8 | sana[3]; only for char's
 	return hash % SIZE;
 }
@@ -118,10 +152,12 @@ int init_file(int argc, char** argv) {
 }
 
 int print_result() {
-	for (int index = 0; index<MAX_PRINT_SIZE; index++){
+	const int MAX_PRINT = maximum_print_size(datapoints);
+	for (int index = 0; index < MAX_PRINT; index++){
 		if(hashArray[index] != NULL)
-		printf("%d %ls %d\n", index, hashArray[index]->word, hashArray[index]->occurences);
+			printf("%d %ls %d\n", index, hashArray[index]->word, hashArray[index]->occurences);
 	}
+	fclose(document);
 	return OK;
 }
 
@@ -133,7 +169,6 @@ int strip_nulls() {
 		if (hashArray[scan] == NULL){
 			while (hashArray[scan] == NULL)
 				scan++;
-		
 		}
 		if (scan >= SIZE)
 			break;
@@ -175,7 +210,6 @@ int partition(int low_index, int high_index)
 
 	for (int j = low_index; j <= high_index - 1; j++)
 	{
-
 		if (hashArray[j]->occurences >= pivot->occurences) {
 			++i;
 			if (i != j) {
