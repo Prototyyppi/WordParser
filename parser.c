@@ -5,6 +5,7 @@
 #include <limits.h>
 #include <locale.h>
 #include <ctype.h>
+#include <errno.h>
 #include <wchar.h> // for scandi characters
 #include "parser.h"
 
@@ -15,16 +16,17 @@ int datapoints = 0;
 int main(int argc, char** argv) {
 	char *locale;
 	locale = setlocale(LC_ALL, "fi_FI.UTF-8");
-
+	if (locale == NULL)
+		printf("Could not find finnish locale\n");
 	wchar_t* sana;
 	int ret;
 	if (init_file(argc, argv) != OK)
 		return NOK;
 	while (((sana = get_word()) )!= NULL) {
-	
 	if (sana == NULL) return OK_EOF;
 	int key = hash(sana);
 	ret = find(key, sana);
+	free(sana);
 	if (datapoints > SIZE-1) {
 		remove_rare();
 	}
@@ -117,16 +119,17 @@ wchar_t* get_word() {
 
 	wint_t character;
 	wint_t charray[2];
-	wint_t* ret_str = calloc(50,sizeof(wint_t));
+	wint_t* ret_str = calloc(WORD_MAX_LEN,sizeof(wint_t));
 	int ret, ok = 0;
-	
 	while (ok == 0) {
-		while (((character = fgetwc(document)) ) && ((character>=L'A'&&character<=L'Ö')||(character>=L'a'&&character<=L'ö'))){
+		//while (((character = fgetwc(document)) ) && ((character>=L'A'&&character<=L'Ö')||(character>=L'a'&&character<=L'ö'))){
+			while (((character = fgetwc(document)) ) && ((character>=L'A'&&character<=L'Z')||(character>=L'a'&&character<=L'z') || ((int)character > 128 && (int)character < 155 ))){
 			//ret = fscanf(document, "%99[a-zA-Z]", ret_str);
 			character = towupper(character);
 			charray[0] = character;
 			charray[1] = 0;
-			wcscat(ret_str, charray);
+			wcsncat(ret_str, charray, WORD_MAX_LEN);
+			//overflow can happen, that is why based on strncat
 			ok = 1;
 		}
 		if (character == EOF)
@@ -134,7 +137,6 @@ wchar_t* get_word() {
 		else
 			continue;
 	}
-
 	#if DEBUG
 	printf("Current word %ls\n", ret_str);
 	#endif

@@ -42,6 +42,9 @@
 *.idb
 *.pdb
 
+# Test files
+*.txt
+
 # VSCode preferences
 .vscode
 

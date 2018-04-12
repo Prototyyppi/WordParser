@@ -8,7 +8,7 @@
  */
 
 //Size should be over wanted value to make indexes unique and to fit the wanted words
-#define SIZE 1000
+#define SIZE 2000
 #define WORD_MAX_LEN 100
 #define maximum_print_size(x) ((x) > 100 ? 100 : SIZE-1)
 #define DEBUG 0
