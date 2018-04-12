@@ -8,7 +8,7 @@
  */
 
 //Size should be over wanted value to make indexes unique and to fit the wanted words
-#define SIZE 2000
+#define SIZE 5000
 #define WORD_MAX_LEN 100
 #define maximum_print_size(x) ((x) > 100 ? 100 : SIZE-1)
 #define DEBUG 0
@@ -65,4 +65,5 @@ int strip_nulls();
 int quick_sort(int low_index, int high_index);
 
 /* Quick sort get last value and sort smaller and bigger on either side of it */
+/* Excellent illustration of quicksort can be found at https://en.wikipedia.org/wiki/Quicksort */
 int partition(int low_index, int high_index);

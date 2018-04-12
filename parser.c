@@ -123,7 +123,9 @@ wchar_t* get_word() {
 	int ret, ok = 0;
 	while (ok == 0) {
 		//while (((character = fgetwc(document)) ) && ((character>=L'A'&&character<=L'Ö')||(character>=L'a'&&character<=L'ö'))){
-			while (((character = fgetwc(document)) ) && ((character>=L'A'&&character<=L'Z')||(character>=L'a'&&character<=L'z') || ((int)character > 128 && (int)character < 155 ))){
+			while (((character = fgetwc(document)) ) && ((character>=L'A'&&character<=L'Z')||
+			(character>=L'a'&&character<=L'z') || ((int)character > 128 && (int)character < 155 )
+																		|| (character == '\''))) {
 			//ret = fscanf(document, "%99[a-zA-Z]", ret_str);
 			character = towupper(character);
 			charray[0] = character;
