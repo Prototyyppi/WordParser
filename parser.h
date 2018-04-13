@@ -1,4 +1,4 @@
-#pragma once //__PARSER_FILE
+#pragma once //PARSER_HEADER
 
 /*
  * Parser - 2018
@@ -12,6 +12,7 @@
 #define WORD_MAX_LEN 100
 #define maximum_print_size(x) ((x) > 100 ? 100 : SIZE-1)
 #define DEBUG 0
+#define GRAPHICAL 1 // disable this for more speed and compability
 
 struct word {
 	wchar_t word[WORD_MAX_LEN];
@@ -67,3 +68,8 @@ int quick_sort(int low_index, int high_index);
 /* Quick sort get last value and sort smaller and bigger on either side of it */
 /* Excellent illustration of quicksort can be found at https://en.wikipedia.org/wiki/Quicksort */
 int partition(int low_index, int high_index);
+
+/* Visible bar to show that it is working ok */
+#if GRAPHICAL
+int printfunc();
+#endif

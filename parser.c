@@ -2,26 +2,57 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
-#include <limits.h>
-#include <locale.h>
-#include <ctype.h>
+#include <limits.h> // Highest int value
+#include <locale.h> // Prequiosite for scandi characters
 #include <errno.h>
 #include <wchar.h> // for scandi characters
-#include "parser.h"
+#include "parser.h" //The header file
+
+#if GRAPHICAL
+#ifdef WIN32
+#define WINDOWS 1
+#include <windows.h>
+#else
+#include <unistd.h>
+#include <signal.h> //signals
+#include <time.h> //nanosleep
+#endif
+#endif
 
 struct word* hashArray[SIZE];
 FILE* document;
 int datapoints = 0;
+int wordcount = 0;
+
 
 int main(int argc, char** argv) {
+
+	#ifdef WINDOWS
+	printf("Please define graphical to 0 on windows environment\n");
+	return EXIT_FAILURE;
+	#endif
+	wchar_t* sana;
+	int ret;
 	char *locale;
 	locale = setlocale(LC_ALL, "fi_FI.UTF-8");
 	if (locale == NULL)
 		printf("Could not find finnish locale\n");
-	wchar_t* sana;
-	int ret;
+
 	if (init_file(argc, argv) != OK)
 		return NOK;
+	printf("\n------------------------------------\n");
+	printf("\nCALCULATING 100 MOST COMMON WORDS...\n");
+	printf("\n------------------------------------\n");
+
+	#if GRAPHICAL
+	pid_t pid = fork();
+	if (pid == -1){
+		printf("Fork failed\n");
+	}
+	if (pid == 0)
+		printfunc();
+	#endif
+
 	while (((sana = get_word()) )!= NULL) {
 	if (sana == NULL) return OK_EOF;
 	int key = hash(sana);
@@ -33,9 +64,29 @@ int main(int argc, char** argv) {
 	}
 	int max_ind = strip_nulls(); // remove nulls to make things easy for quicksort, return max index
 	quick_sort(0, max_ind);
+
+	#if GRAPHICAL
+	if (pid != 0 && pid != -1)
+		kill(pid, SIGKILL);
+	#endif
+
 	print_result();
 	return EXIT_SUCCESS;
 }
+
+#if GRAPHICAL
+int printfunc(){
+	struct timespec ts;
+	ts.tv_sec = 0;
+	ts.tv_nsec = (180000000L);
+	printf("PLEASE WAIT: ");
+	while(1) {
+		printf("#");
+		nanosleep(&ts, NULL);
+		fflush(stdout);
+	}
+}
+#endif
 
 int find(int key, wchar_t* sana) {
 
@@ -71,6 +122,7 @@ int add(int index, int key, wchar_t* sana) {
 		index++;// %= SIZE;
 	hashArray[index] = item;
 	//printf("%d index", index);
+	wordcount++;
 	return OK;
 }
 
@@ -85,7 +137,6 @@ int remove_rare() {
 		index++;
 		ok = 1;
 	}
-	//printf("I sHALL REMOVE");
 	if (!ok)
 		return NOK;
 	remove_datapoint(min_index);
@@ -142,7 +193,6 @@ wchar_t* get_word() {
 	#if DEBUG
 	printf("Current word %ls\n", ret_str);
 	#endif
-
 	return ret_str;
 }
 int init_file(int argc, char** argv) {
@@ -151,12 +201,17 @@ int init_file(int argc, char** argv) {
 		printf("Please check filename (%s)\n", argv[1]);
 		return NOK;
 	}
+	/*
+	fseek(document, 0, SEEK_END);
+	filelen = ftell(document);
+	*/
 	rewind(document);
 	return OK;
 }
 
 int print_result() {
 	const int MAX_PRINT = maximum_print_size(datapoints);
+	printf("\nFound %d different words:\n", wordcount);
 	for (int index = 0; index < MAX_PRINT; index++){
 		if(hashArray[index] != NULL)
 			printf("%d %ls %d\n", index, hashArray[index]->word, hashArray[index]->occurences);
@@ -202,7 +257,6 @@ int quick_sort(int low_index, int high_index) {
 	}
 	return OK;
 }
-
 
 int partition(int low_index, int high_index)
 {
