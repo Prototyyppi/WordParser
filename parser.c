@@ -11,7 +11,6 @@
 #if GRAPHICAL
 #ifdef WIN32
 #define WINDOWS 1
-#include <windows.h>
 #else
 #include <unistd.h>
 #include <signal.h> //signals
@@ -31,9 +30,11 @@ int main(int argc, char** argv) {
 	printf("Please define graphical to 0 on windows environment\n");
 	return EXIT_FAILURE;
 	#endif
-	wchar_t* sana;
+
+	wint_t* sana;
 	int ret;
 	char *locale;
+
 	locale = setlocale(LC_ALL, "fi_FI.UTF-8");
 	if (locale == NULL)
 		printf("Could not find finnish locale\n");
@@ -53,9 +54,8 @@ int main(int argc, char** argv) {
 		printfunc();
 	#endif
 
-	while (((sana = get_word()) )!= NULL) {
-	if (sana == NULL) return OK_EOF;
-	int key = hash(sana);
+	while ((sana = get_word()) != NULL) {
+	uint32_t key = hash(sana);
 	ret = find(key, sana);
 	free(sana);
 	if (datapoints > SIZE-1) {
@@ -88,10 +88,10 @@ int printfunc(){
 }
 #endif
 
-int find(int key, wchar_t* sana) {
+int find(uint32_t key, wint_t* sana) {
 
 	int ret;
-	int index = key;
+	uint32_t index = key;
 
 	#if DEBUG
 	printf("%ls", sana);
@@ -111,7 +111,7 @@ int find(int key, wchar_t* sana) {
 	return OK;
 }
 
-int add(int index, int key, wchar_t* sana) {
+int add(uint32_t index, uint32_t key, wint_t* sana) {
 
 	struct word *item = malloc(sizeof(struct word));
 	datapoints += 1;
@@ -127,7 +127,7 @@ int add(int index, int key, wchar_t* sana) {
 }
 
 int remove_rare() {
-	int index = 0;
+	uint32_t index = 0;
 	int ok, curr_min = INT32_MAX, min_index;
 	while (index < SIZE) {
 		if (hashArray[index] != NULL) {
@@ -143,7 +143,7 @@ int remove_rare() {
 	return OK;
 }
 
-void remove_datapoint(int index) {
+void remove_datapoint(uint32_t index) {
 	//printf("I sHALL REMOVE");
 	hashArray[index]->key = -1;
 	wcscpy(hashArray[index]->word, L"removed");
@@ -153,20 +153,20 @@ void remove_datapoint(int index) {
 
 }
 
-int hash(wchar_t* sana) {
-	int hash;
+uint32_t hash(wint_t* sana) {
+	uint32_t hash;
 	for (int i = 0; i < 4; i++){
 		if (sana[i] != 0) {
 			hash *= sana[i];
-			hash >>= 2;
+			//hash >>= 2;
 		}
 	}
-	//int hash = (int)sana[0];
+	//uint32_t hash = (uint32_t)sana[0];
 	//hash = sana[0] << 24 | sana[1] << 16 | sana[2] << 8 | sana[3]; only for char's
 	return hash % SIZE;
 }
 
-wchar_t* get_word() {
+wint_t* get_word() {
 
 	wint_t character;
 	wint_t charray[2];
@@ -175,13 +175,14 @@ wchar_t* get_word() {
 	while (ok == 0) {
 		//while (((character = fgetwc(document)) ) && ((character>=L'A'&&character<=L'Ö')||(character>=L'a'&&character<=L'ö'))){
 			while (((character = fgetwc(document)) ) && ((character>=L'A'&&character<=L'Z')||
-			(character>=L'a'&&character<=L'z') || ((int)character > 128 && (int)character < 155 )
+			(character>=L'a'&&character<=L'z') || ((character > 0xC0) && (character <= 0xFF ))
 																		|| (character == '\''))) {
-			//ret = fscanf(document, "%99[a-zA-Z]", ret_str);
+			//UTF-8 All latin characters are from 0xC0 -> 0xFF
 			character = towupper(character);
 			charray[0] = character;
 			charray[1] = 0;
 			wcsncat(ret_str, charray, WORD_MAX_LEN);
+			//wprintf(L"%ls", charray);
 			//overflow can happen, that is why based on strncat
 			ok = 1;
 		}
@@ -212,7 +213,7 @@ int init_file(int argc, char** argv) {
 int print_result() {
 	const int MAX_PRINT = maximum_print_size(datapoints);
 	printf("\nFound %d different words:\n", wordcount);
-	for (int index = 0; index < MAX_PRINT; index++){
+	for (uint32_t index = 0; index < MAX_PRINT; index++) {
 		if(hashArray[index] != NULL)
 			printf("%d %ls %d\n", index, hashArray[index]->word, hashArray[index]->occurences);
 	}

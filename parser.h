@@ -15,9 +15,9 @@
 #define GRAPHICAL 1 // disable this for more speed and compability
 
 struct word {
-	wchar_t word[WORD_MAX_LEN];
+	wint_t word[WORD_MAX_LEN];
 	int occurences;
-	int key;
+	uint32_t key;
 };
 
 enum err {
@@ -34,13 +34,13 @@ static inline const char* err2str(enum err err)
 }
 
 /* check if word is already found */
-int find(int key, wchar_t sana[]);
+int find(uint32_t key, wint_t sana[]);
 
 /* word was not foud, add it */
-int add(int index, int key, wchar_t* sana);
+int add(uint32_t index, uint32_t key, wint_t* sana);
 
 /* perform removal */
-void remove_datapoint(int index);
+void remove_datapoint(uint32_t index);
 
 /* if dataset is constrained, we need to delete least common words, note that
  * this may result in wrong output and size should be kept high enough
@@ -48,13 +48,13 @@ void remove_datapoint(int index);
 int remove_rare(void);
 
 /* calculate hash that should be unique for each value. It helps find values faster */
-int hash(wchar_t* sana);
+uint32_t hash(wint_t* sana);
 
 /*Initialize text file, take argument from command line parameter */
 int init_file(int, char**);
 
 /* Get next word. Scandi charwacters are ok too */
-wchar_t* get_word();
+wint_t* get_word();
 
 /* Prints resulting 100 most relevant values */
 int print_result();
