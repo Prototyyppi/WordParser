@@ -8,7 +8,7 @@
 #include <wchar.h> // for scandi characters
 #include "parser.h" //The header file
 
-#if GRAPHICAL
+#if EXPERIMENTAL_GRAPHICAL
 #ifdef WIN32
 #define WINDOWS 1
 #else
@@ -31,21 +31,23 @@ int main(int argc, char** argv) {
 	return EXIT_FAILURE;
 	#endif
 
-	wint_t* sana;
+	wchar_t* sana;
 	int ret;
 	char *locale;
 
-	locale = setlocale(LC_ALL, "fi_FI.UTF-8");
+	locale = setlocale(LC_ALL, ""); // Use the default locale (prob unicode (max 16 bit))
 	if (locale == NULL)
-		printf("Could not find finnish locale\n");
+		printf("Could not find locale\n"); // also text file encoding should be unicode
 
 	if (init_file(argc, argv) != OK)
-		return NOK;
-	printf("\n------------------------------------\n");
-	printf("\nCALCULATING 100 MOST COMMON WORDS...\n");
-	printf("\n------------------------------------\n");
+		return EXIT_FAILURE;
 
-	#if GRAPHICAL
+	printf("\n------------------------------------\n");
+	printf("CALCULATING 100 MOST COMMON WORDS...");
+	printf("\n------------------------------------\n");
+	printf("~~~~~~~~~~~~PLEASE WAIT!~~~~~~~~~~~~\n");
+
+	#if EXPERIMENTAL_GRAPHICAL
 	pid_t pid = fork();
 	if (pid == -1){
 		printf("Fork failed\n");
@@ -61,34 +63,55 @@ int main(int argc, char** argv) {
 	if (datapoints > SIZE-1) {
 		remove_rare();
 	}
-	}
-	int max_ind = strip_nulls(); // remove nulls to make things easy for quicksort, return max index
-	quick_sort(0, max_ind);
 
 	#if GRAPHICAL
+	if (!(wordcount%2000)){
+		printf("%lc", 0x2588);
+		fflush(stdout);
+		printf("%s", colors(0));
+	}
+	#endif
+	}
+
+	int max_ind = strip_nulls(); // remove nulls to make things easy for quicksort, return max index
+
+	quick_sort(0, max_ind);
+
+	#if EXPERIMENTAL_GRAPHICAL
 	if (pid != 0 && pid != -1)
-		kill(pid, SIGKILL);
+		kill(pid, SIGTERM);
+	printf("%s", colors(0));
 	#endif
 
 	print_result();
 	return EXIT_SUCCESS;
 }
 
-#if GRAPHICAL
-int printfunc(){
+#if EXPERIMENTAL_GRAPHICAL
+int printfunc() {
 	struct timespec ts;
 	ts.tv_sec = 0;
 	ts.tv_nsec = (180000000L);
-	printf("PLEASE WAIT: ");
+	srand(time(NULL));
+	int i = 0;
+	printf("\n");
+	fflush(stdout);
 	while(1) {
-		printf("#");
+		printf("%s%lc", colors(rand() % 7), 0x2588); // if locale failed, these will too
 		nanosleep(&ts, NULL);
 		fflush(stdout);
+		i++;
+		if (i==35){
+			printf("%lc\n",0x2588);
+			nanosleep(&ts, NULL);
+			fflush(stdout);
+			i = 0;
+	}
 	}
 }
 #endif
 
-int find(uint32_t key, wint_t* sana) {
+int find(uint32_t key, wchar_t* sana) {
 
 	int ret;
 	uint32_t index = key;
@@ -111,7 +134,7 @@ int find(uint32_t key, wint_t* sana) {
 	return OK;
 }
 
-int add(uint32_t index, uint32_t key, wint_t* sana) {
+int add(uint32_t index, uint32_t key, wchar_t* sana) {
 
 	struct word *item = malloc(sizeof(struct word));
 	datapoints += 1;
@@ -153,7 +176,7 @@ void remove_datapoint(uint32_t index) {
 
 }
 
-uint32_t hash(wint_t* sana) {
+uint32_t hash(wchar_t* sana) {
 	uint32_t hash;
 	for (int i = 0; i < 4; i++){
 		if (sana[i] != 0) {
@@ -166,11 +189,11 @@ uint32_t hash(wint_t* sana) {
 	return hash % SIZE;
 }
 
-wint_t* get_word() {
+wchar_t* get_word() {
 
-	wint_t character;
-	wint_t charray[2];
-	wint_t* ret_str = calloc(WORD_MAX_LEN,sizeof(wint_t));
+	wchar_t character;
+	wchar_t charray[2];
+	wchar_t* ret_str = calloc(WORD_MAX_LEN,sizeof(wchar_t));
 	int ret, ok = 0;
 	while (ok == 0) {
 		//while (((character = fgetwc(document)) ) && ((character>=L'A'&&character<=L'Ö')||(character>=L'a'&&character<=L'ö'))){
@@ -197,9 +220,12 @@ wint_t* get_word() {
 	return ret_str;
 }
 int init_file(int argc, char** argv) {
-	if (argc < 1) return NOK;
-	if ((document = fopen(argv[1], "r")) == NULL){
-		printf("Please check filename (%s)\n", argv[1]);
+	if (argc <= 1) {
+		printf("USAGE: %s [text file as argument]\n", argv[0]);
+		return NOK;
+	}
+	if ((document = fopen(argv[1], "r")) == NULL) {
+		printf("Please check filename !\n");
 		return NOK;
 	}
 	/*
@@ -212,7 +238,8 @@ int init_file(int argc, char** argv) {
 
 int print_result() {
 	const int MAX_PRINT = maximum_print_size(datapoints);
-	printf("\nFound %d different words:\n", wordcount);
+	printf("\nFOUND %d DIFFERENT WORDS:\n", wordcount);
+	printf("[INDEX] [STRING] [OCCURENCES]\n");
 	for (uint32_t index = 0; index < MAX_PRINT; index++) {
 		if(hashArray[index] != NULL)
 			printf("%d %ls %d\n", index, hashArray[index]->word, hashArray[index]->occurences);
@@ -259,9 +286,7 @@ int quick_sort(int low_index, int high_index) {
 	return OK;
 }
 
-int partition(int low_index, int high_index)
-{
-
+int partition(int low_index, int high_index) {
 	// pivot (Element to be placed at right position)
 	struct word* pivot = hashArray[high_index];
 	struct word* temp;
