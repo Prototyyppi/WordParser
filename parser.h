@@ -12,8 +12,8 @@
 #define WORD_MAX_LEN 100
 #define maximum_print_size(x) ((x) > 100 ? 100 : SIZE-1)
 #define DEBUG 0
-#define EXPERIMENTAL_GRAPHICAL 1 // disable this for more speed and compability
-#define GRAPHICAL 0
+#define EXPERIMENTAL_GRAPHICAL 0 // disable graphics for more speed and compability
+#define GRAPHICAL 1 // this can be used with windows or linux
 
 enum color {
 	NORMAL,

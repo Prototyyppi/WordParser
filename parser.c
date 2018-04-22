@@ -4,30 +4,23 @@
 #include <string.h>
 #include <limits.h> // Highest int value
 #include <locale.h> // Prequiosite for scandi characters
-#include <errno.h>
 #include <wchar.h> // for scandi characters
 #include "parser.h" //The header file
 
 #if EXPERIMENTAL_GRAPHICAL
-#ifdef WIN32
-#define WINDOWS 1
-#else
 #include <unistd.h>
 #include <signal.h> //signals
 #include <time.h> //nanosleep
 #endif
-#endif
 
 struct word* hashArray[SIZE];
 FILE* document;
-int datapoints = 0;
-int wordcount = 0;
-
+int datapoints = 0, wordcount = 0, filelen_block = 0, filelen_block_size = 0, trig = 1;
 
 int main(int argc, char** argv) {
 
 	#ifdef WINDOWS
-	printf("Please define graphical to 0 on windows environment\n");
+	printf("Please define exp. graphical to 0 on windows environment\n");
 	return EXIT_FAILURE;
 	#endif
 
@@ -65,10 +58,15 @@ int main(int argc, char** argv) {
 	}
 
 	#if GRAPHICAL
-	if (!(wordcount%2000)){
+	int curr_pos = ftell(document);
+	if (((curr_pos > filelen_block - 70) && (curr_pos < filelen_block + 70)) && trig) {
+		filelen_block += filelen_block_size;
+		
+		if(trig == 35)
+			trig = 0;
+		trig++;
 		printf("%lc", 0x2588);
 		fflush(stdout);
-		printf("%s", colors(0));
 	}
 	#endif
 	}
@@ -116,11 +114,6 @@ int find(uint32_t key, wchar_t* sana) {
 	int ret;
 	uint32_t index = key;
 
-	#if DEBUG
-	printf("%ls", sana);
-	printf("%ls", hashArray[index]->word);
-	#endif
-
 	while (hashArray[index] != NULL) {
 		if (!(wcscmp(hashArray[index]->word, sana))) {
 			hashArray[index]->occurences++;
@@ -167,13 +160,9 @@ int remove_rare() {
 }
 
 void remove_datapoint(uint32_t index) {
-	//printf("I sHALL REMOVE");
-	hashArray[index]->key = -1;
-	wcscpy(hashArray[index]->word, L"removed");
-	hashArray[index]->occurences = -1;
+	free(hashArray[index]);
 	hashArray[index] = NULL;
 	datapoints--;
-
 }
 
 uint32_t hash(wchar_t* sana) {
@@ -196,7 +185,6 @@ wchar_t* get_word() {
 	wchar_t* ret_str = calloc(WORD_MAX_LEN,sizeof(wchar_t));
 	int ret, ok = 0;
 	while (ok == 0) {
-		//while (((character = fgetwc(document)) ) && ((character>=L'A'&&character<=L'Ö')||(character>=L'a'&&character<=L'ö'))){
 			while (((character = fgetwc(document)) ) && ((character>=L'A'&&character<=L'Z')||
 			(character>=L'a'&&character<=L'z') || ((character > 0xC0) && (character <= 0xFF ))
 																		|| (character == '\''))) {
@@ -209,7 +197,7 @@ wchar_t* get_word() {
 			//overflow can happen, that is why based on strncat
 			ok = 1;
 		}
-		if (character == EOF)
+		if (character == WEOF)
 			return NULL;
 		else
 			continue;
@@ -228,10 +216,11 @@ int init_file(int argc, char** argv) {
 		printf("Please check filename !\n");
 		return NOK;
 	}
-	/*
+	#if GRAPHICAL
 	fseek(document, 0, SEEK_END);
-	filelen = ftell(document);
-	*/
+	filelen_block = ftell(document) / 36L;
+	filelen_block_size = filelen_block;
+	#endif
 	rewind(document);
 	return OK;
 }
@@ -239,11 +228,11 @@ int init_file(int argc, char** argv) {
 int print_result() {
 	const int MAX_PRINT = maximum_print_size(datapoints);
 	printf("\nFOUND %d DIFFERENT WORDS:\n", wordcount);
-	printf("[INDEX] [STRING] [OCCURENCES]\n");
+	printf("[INDEX]  [HITS]  [STRING]\n");
 	for (uint32_t index = 0; index < MAX_PRINT; index++) {
 		if(hashArray[index] != NULL)
-			printf("%d %ls %d\n", index, hashArray[index]->word, hashArray[index]->occurences);
-	}
+			printf("%-8d %-7d %ls\n", index,hashArray[index]->occurences, hashArray[index]->word);
+	} // formatting print does not seem to work too well with finnish chars
 	fclose(document);
 	return OK;
 }
@@ -262,10 +251,6 @@ int strip_nulls() {
 		if (index != scan)
 			hashArray[index] = hashArray[scan];
 		scan++;
-		#if DEBUG
-		printf("(%d scan)", scan);
-		printf("(%d VALUE)", index);
-		#endif
 	}
 	int sec_index = index;
 	for (; sec_index<SIZE; sec_index++) {
