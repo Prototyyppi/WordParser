@@ -42,6 +42,7 @@ struct word {
 
 enum err {
 	OK,
+	FOUND,
 	NOK,
 	OK_EOF
 };

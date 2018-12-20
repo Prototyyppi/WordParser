@@ -19,10 +19,10 @@ int datapoints = 0, wordcount = 0, filelen_block = 0, filelen_block_size = 0, tr
 
 int main(int argc, char** argv) {
 
-	#ifdef WINDOWS
+#ifdef WINDOWS
 	printf("Please define exp. graphical to 0 on windows environment\n");
 	return EXIT_FAILURE;
-	#endif
+#endif
 
 	wchar_t* sana;
 	int ret;
@@ -40,46 +40,46 @@ int main(int argc, char** argv) {
 	printf("\n------------------------------------\n");
 	printf("~~~~~~~~~~~~PLEASE WAIT!~~~~~~~~~~~~\n");
 
-	#if EXPERIMENTAL_GRAPHICAL
+#if EXPERIMENTAL_GRAPHICAL
 	pid_t pid = fork();
 	if (pid == -1){
 		printf("Fork failed\n");
 	}
 	if (pid == 0)
 		printfunc();
-	#endif
+#endif
 
 	while ((sana = get_word()) != NULL) {
 	uint32_t key = hash(sana);
-	ret = find(key, sana);
+	find(key, sana);
 	free(sana);
 	if (datapoints > SIZE-1) {
 		remove_rare();
 	}
 
-	#if GRAPHICAL
+#if GRAPHICAL
 	int curr_pos = ftell(document);
 	if (((curr_pos > filelen_block - 70) && (curr_pos < filelen_block + 70)) && trig) {
 		filelen_block += filelen_block_size;
 		
-		if(trig == 35)
+		if (trig == 35)
 			trig = 0;
 		trig++;
 		printf("%lc", 0x2588);
 		fflush(stdout);
 	}
-	#endif
+#endif
 	}
 
 	int max_ind = strip_nulls(); // remove nulls to make things easy for quicksort, return max index
 
 	quick_sort(0, max_ind);
 
-	#if EXPERIMENTAL_GRAPHICAL
+#if EXPERIMENTAL_GRAPHICAL
 	if (pid != 0 && pid != -1)
 		kill(pid, SIGTERM);
 	printf("%s", colors(0));
-	#endif
+#endif
 
 	print_result();
 	return EXIT_SUCCESS;
@@ -118,7 +118,7 @@ int find(uint32_t key, wchar_t* sana) {
 		if (!(wcscmp(hashArray[index]->word, sana))) {
 			hashArray[index]->occurences++;
 			//printf("Found new %s (%d)\n",hashArray[index]->word, hashArray[index]->occurences);
-			return NOK;
+			return FOUND;
 		}
 	++index;
 	index %= SIZE; //wrap around as needed
@@ -138,7 +138,6 @@ int add(uint32_t index, uint32_t key, wchar_t* sana) {
 		index++;// %= SIZE;
 	hashArray[index] = item;
 	//printf("%d index", index);
-	wordcount++;
 	return OK;
 }
 
@@ -202,9 +201,10 @@ wchar_t* get_word() {
 		else
 			continue;
 	}
-	#if DEBUG
+#if DEBUG
 	printf("Current word %ls\n", ret_str);
-	#endif
+#endif
+	wordcount++;
 	return ret_str;
 }
 int init_file(int argc, char** argv) {
@@ -216,11 +216,11 @@ int init_file(int argc, char** argv) {
 		printf("Please check filename !\n");
 		return NOK;
 	}
-	#if GRAPHICAL
+#if GRAPHICAL
 	fseek(document, 0, SEEK_END);
 	filelen_block = ftell(document) / 36L;
 	filelen_block_size = filelen_block;
-	#endif
+#endif
 	rewind(document);
 	return OK;
 }
